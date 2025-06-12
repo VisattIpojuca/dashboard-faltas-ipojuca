@@ -4,12 +4,12 @@ import pandas as pd
 import plotly.express as px
 
 # Configurações da página
-st.set_page_config(page_title="Dashboard de Faltas - Vigilância em Saúde", layout="wide")
-st.title("📊 Dashboard de Faltas dos Funcionários - Vigilância em Saúde de Ipojuca")
+st.set_page_config(page_title="Dashboard de Faltas - APS Ipojuca", layout="wide")
+st.title("📊 Dashboard de Faltas dos Funcionários - Atenção Primária à Saúde de Ipojuca")
 
 # ID e nome da aba
 sheet_id = "1vf27HR8Pk-CiS_zT-1-0oskfsMlR6DPM63OX61SJzU0"
-sheet_name = "Respostas ao formulário 1"
+sheet_name = "respostas1"
 
 # Converte para CSV (Google Sheets)
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
