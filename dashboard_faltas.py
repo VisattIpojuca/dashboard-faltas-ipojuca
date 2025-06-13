@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from datetime import timedelta
 
 # Configurações da página
 st.set_page_config(page_title="Dashboard de Faltas - APS Ipojuca", layout="wide")
@@ -43,11 +44,15 @@ df["Mês"] = df["Data da Falta"].dt.month_name()
 
 # Filtros
 st.sidebar.header("🔍 Filtros")
-funcionarios = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Nome do Funcionário"].unique()))
-setores = st.sidebar.multiselect("Nome do Profissional", sorted(df["Setor"].unique()))
+setores = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Setor"].unique()))
+funcionarios = st.sidebar.multiselect("Nome do Profissional", sorted(df["Nome do Funcionário"].unique()))
 cargos = st.sidebar.multiselect("Motivo da Falta", sorted(df["Motivo"].unique()))
-data_inicio = st.sidebar.date_input("Data inicial")
-data_fim = st.sidebar.date_input("Data final")
+
+data_min = df["Data da Falta"].min()
+data_max = df["Data da Falta"].max()
+default_inicio = data_max - timedelta(days=30)
+
+periodo = st.sidebar.date_input("Período da Falta", [default_inicio, data_max], min_value=data_min, max_value=data_max)
 
 # Aplica os filtros
 df_filtrado = df.copy()
@@ -57,7 +62,8 @@ if funcionarios:
     df_filtrado = df_filtrado[df_filtrado["Nome do Funcionário"].isin(funcionarios)]
 if cargos:
     df_filtrado = df_filtrado[df_filtrado["Motivo"].isin(cargos)]
-if data_inicio and data_fim:
+if len(periodo) == 2:
+    data_inicio, data_fim = periodo
     df_filtrado = df_filtrado[(df_filtrado["Data da Falta"] >= pd.to_datetime(data_inicio)) & (df_filtrado["Data da Falta"] <= pd.to_datetime(data_fim))]
 
 # Resumo individual (se apenas 1 profissional filtrado)
