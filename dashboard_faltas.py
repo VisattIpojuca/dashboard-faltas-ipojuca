@@ -48,9 +48,9 @@ setores = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Setor"].unique(
 funcionarios = st.sidebar.multiselect("Nome do Profissional", sorted(df["Nome do Funcionário"].unique()))
 cargos = st.sidebar.multiselect("Motivo da Falta", sorted(df["Motivo"].unique()))
 
-data_min = df["Data da Falta"].min()
-data_max = df["Data da Falta"].max()
-default_inicio = data_max - timedelta(days=30)
+data_min = df["Data da Falta"].min().date()
+data_max = df["Data da Falta"].max().date()
+default_inicio = (df["Data da Falta"].max() - timedelta(days=30)).date()
 
 periodo = st.sidebar.date_input("Período da Falta", [default_inicio, data_max], min_value=data_min, max_value=data_max)
 
