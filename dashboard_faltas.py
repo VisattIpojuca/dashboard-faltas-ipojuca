@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Configurações da página
 st.set_page_config(page_title="Dashboard de Faltas - APS Ipojuca", layout="wide")
@@ -34,69 +34,75 @@ df.rename(columns={
     df.columns[1]: "Nome do Funcionário",
     df.columns[2]: "Setor",
     df.columns[3]: "Data da Falta",
-    df.columns[4]: "Motivo",
-    df.columns[5]: "Observações"
 }, inplace=True)
 
+# Converte coluna Data da Falta para datetime
 df["Data da Falta"] = pd.to_datetime(df["Data da Falta"], errors='coerce')
-df["Ano"] = df["Data da Falta"].dt.year
-df["Mês"] = df["Data da Falta"].dt.month_name()
 
-# Filtros
-st.sidebar.header("🔍 Filtros")
-setores = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Setor"].unique()))
-funcionarios = st.sidebar.multiselect("Nome do Profissional", sorted(df["Nome do Funcionário"].unique()))
-cargos = st.sidebar.multiselect("Motivo da Falta", sorted(df["Motivo"].unique()))
+# Sidebar - filtros corrigidos
+setores = st.sidebar.multiselect(
+    "Unidade de Saúde",
+    options=sorted(df["Setor"].dropna().unique())
+)
 
+funcionarios = st.sidebar.multiselect(
+    "Nome do Profissional",
+    options=sorted(df["Nome do Funcionário"].dropna().unique())
+)
+
+# Configura filtro de datas com padrão últimos 30 dias e intervalo permitido entre 1 e 365 dias
 data_min = df["Data da Falta"].min()
 data_max = df["Data da Falta"].max()
-default_inicio = data_max - timedelta(days=30)
 
-periodo = st.sidebar.date_input("Período da Falta", [default_inicio, data_max], min_value=data_min, max_value=data_max)
+# Calcula default de data_inicio (máximo entre data_min e 30 dias atrás)
+default_start = max(data_min, data_max - timedelta(days=30))
 
-# Aplica os filtros
+# Inputs de data com limite de intervalo
+data_inicio = st.sidebar.date_input(
+    "Data inicial",
+    value=default_start,
+    min_value=data_min,
+    max_value=data_max
+)
+
+data_fim = st.sidebar.date_input(
+    "Data final",
+    value=data_max,
+    min_value=data_min,
+    max_value=data_max
+)
+
+# Ajusta para garantir intervalo máximo de 365 dias
+if (data_fim - data_inicio).days > 365:
+    st.sidebar.warning("O intervalo máximo permitido é de 365 dias. Ajustando data inicial.")
+    data_inicio = data_fim - timedelta(days=365)
+
+# Filtra os dados de acordo com os filtros
 df_filtrado = df.copy()
+
 if setores:
     df_filtrado = df_filtrado[df_filtrado["Setor"].isin(setores)]
+
 if funcionarios:
     df_filtrado = df_filtrado[df_filtrado["Nome do Funcionário"].isin(funcionarios)]
-if cargos:
-    df_filtrado = df_filtrado[df_filtrado["Motivo"].isin(cargos)]
-if len(periodo) == 2:
-    data_inicio, data_fim = periodo
-    df_filtrado = df_filtrado[(df_filtrado["Data da Falta"] >= pd.to_datetime(data_inicio)) & (df_filtrado["Data da Falta"] <= pd.to_datetime(data_fim))]
 
-# Resumo individual (se apenas 1 profissional filtrado)
-if len(funcionarios) == 1:
-    st.markdown("### 🧾 Resumo do Profissional Selecionado")
-    resumo = df_filtrado[["Data da Falta", "Motivo", "Observações"]].sort_values("Data da Falta", ascending=False)
-    st.dataframe(resumo, use_container_width=True)
+df_filtrado = df_filtrado[
+    (df_filtrado["Data da Falta"] >= pd.to_datetime(data_inicio)) &
+    (df_filtrado["Data da Falta"] <= pd.to_datetime(data_fim))
+]
 
-# Métricas
-total_faltas = len(df_filtrado)
-unique_funcionarios = df_filtrado["Nome do Funcionário"].nunique()
-unique_setores = df_filtrado["Setor"].nunique()
+st.markdown(f"### 📋 Resumo da Seleção Ativa ({len(df_filtrado)} registros)")
 
-st.subheader("📈 Visão Geral")
-col1, col2, col3 = st.columns(3)
-col1.metric("Total de Faltas", total_faltas)
-col2.metric("Funcionários", unique_funcionarios)
-col3.metric("Unidades", unique_setores)
+st.dataframe(df_filtrado.reset_index(drop=True))
 
-# Gráficos
-st.subheader("📊 Distribuição de Faltas")
-col4, col5 = st.columns(2)
-with col4:
-    fig1 = px.histogram(df_filtrado, x="Motivo", color="Setor", title="Faltas por Motivo")
-    st.plotly_chart(fig1, use_container_width=True)
-with col5:
-    fig2 = px.histogram(df_filtrado, x="Mês", color="Setor", title="Faltas por Mês")
-    st.plotly_chart(fig2, use_container_width=True)
+# Aqui você pode adicionar gráficos ou outras análises
 
-# Tabela detalhada
-st.subheader("📋 Resumo da Seleção Ativa")
-st.dataframe(df_filtrado, use_container_width=True)
+# Exportar CSV dos dados filtrados
+csv = df_filtrado.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Exportar dados filtrados (.csv)",
+    data=csv,
+    file_name='faltas_filtradas.csv',
+    mime='text/csv',
+)
 
-# Download CSV
-csv = df_filtrado.to_csv(index=False).encode("utf-8")
-st.download_button("📥 Baixar como CSV", data=csv, file_name="faltas_filtradas.csv", mime="text/csv")
