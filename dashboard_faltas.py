@@ -1,8 +1,8 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from io import BytesIO
+from fpdf import FPDF
 
 # Configurações da página
 st.set_page_config(page_title="Dashboard de Faltas - APS Ipojuca", layout="wide")
@@ -96,9 +96,23 @@ st.dataframe(df_filtrado, use_container_width=True)
 csv = df_filtrado.to_csv(index=False).encode("utf-8")
 st.download_button("📥 Baixar como CSV", data=csv, file_name="faltas_filtradas.csv", mime="text/csv")
 
-# Download XLSX
-xlsx_buffer = BytesIO()
-with pd.ExcelWriter(xlsx_buffer, engine='xlsxwriter') as writer:
-    df_filtrado.to_excel(writer, index=False, sheet_name='Faltas')
-    writer.save()
-st.download_button("📥 Baixar como XLSX", data=xlsx_buffer.getvalue(), file_name="faltas_filtradas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+# Download PDF (simples)
+def gerar_pdf(df):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=10)
+    pdf.cell(200, 10, txt="Relatório de Faltas", ln=True, align="C")
+    pdf.ln(10)
+
+    for i, row in df.iterrows():
+        texto = f"{row['Data da Falta'].strftime('%d/%m/%Y')} - {row['Nome do Funcionário']} - {row['Setor']} - {row['Motivo']}"
+        pdf.multi_cell(0, 8, txt=texto)
+        if pd.notna(row['Observações']):
+            pdf.multi_cell(0, 6, txt=f"Obs: {row['Observações']}")
+        pdf.ln(2)
+
+    return pdf.output(dest='S').encode('latin1')
+
+pdf_bytes = gerar_pdf(df_filtrado)
+st.download_button("📥 Baixar como PDF", data=pdf_bytes, file_name="faltas_filtradas.pdf", mime="application/pdf")
