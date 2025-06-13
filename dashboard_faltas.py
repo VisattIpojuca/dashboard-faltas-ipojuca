@@ -43,10 +43,11 @@ df["Mês"] = df["Data da Falta"].dt.month_name()
 
 # Filtros
 st.sidebar.header("🔍 Filtros")
-setores = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Setor"].unique()))
-funcionarios = st.sidebar.multiselect("Nome do Profissional", sorted(df["Nome do Funcionário"].unique()))
+funcionarios = st.sidebar.multiselect("Unidade de Saúde", sorted(df["Nome do Funcionário"].unique()))
+setores = st.sidebar.multiselect("Nome do Profissional", sorted(df["Setor"].unique()))
 cargos = st.sidebar.multiselect("Motivo da Falta", sorted(df["Motivo"].unique()))
-ano = st.sidebar.selectbox("Ano", sorted(df["Ano"].dropna().unique()), index=0)
+data_inicio = st.sidebar.date_input("Data inicial")
+data_fim = st.sidebar.date_input("Data final")
 
 # Aplica os filtros
 df_filtrado = df.copy()
@@ -56,8 +57,8 @@ if funcionarios:
     df_filtrado = df_filtrado[df_filtrado["Nome do Funcionário"].isin(funcionarios)]
 if cargos:
     df_filtrado = df_filtrado[df_filtrado["Motivo"].isin(cargos)]
-if ano:
-    df_filtrado = df_filtrado[df_filtrado["Ano"] == ano]
+if data_inicio and data_fim:
+    df_filtrado = df_filtrado[(df_filtrado["Data da Falta"] >= pd.to_datetime(data_inicio)) & (df_filtrado["Data da Falta"] <= pd.to_datetime(data_fim))]
 
 # Resumo individual (se apenas 1 profissional filtrado)
 if len(funcionarios) == 1:
@@ -87,7 +88,7 @@ with col5:
     st.plotly_chart(fig2, use_container_width=True)
 
 # Tabela detalhada
-st.subheader("📋 Tabela Detalhada")
+st.subheader("📋 Resumo da Seleção Ativa")
 st.dataframe(df_filtrado, use_container_width=True)
 
 # Download CSV
